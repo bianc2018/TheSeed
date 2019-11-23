@@ -1,0 +1,4 @@
+*.bak
+/TheSeed/.vs
+/TheSeed/objs
+/TheSeed/bin

@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="src\main">
+      <UniqueIdentifier>{1edff852-8845-401e-b303-00a08f71d8ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\event">
+      <UniqueIdentifier>{3ff21c31-2841-4a3f-b2dd-9667bbefe426}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\log">
+      <UniqueIdentifier>{6dc5d677-bc09-4b47-982a-c9c34000e407}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\common">
+      <UniqueIdentifier>{2319c593-4f1a-4fb8-957d-3328b0d3496b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\package">
+      <UniqueIdentifier>{ca36b3ff-c3ff-451a-bc0e-81a5e3b5841a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\message">
+      <UniqueIdentifier>{34669e23-81c7-4903-b12b-3315ee46fd0c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="tcp_link.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+    <ClCompile Include="tcp_server.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+    <ClCompile Include="message.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+    <ClCompile Include="message_parser.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>src\common</Filter>
+    </ClCompile>
+    <ClCompile Include="test.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="message_bus.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+    <ClCompile Include="message_session.cpp">
+      <Filter>src\message</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="util.hpp">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="ns_event.hpp">
+      <Filter>src\event</Filter>
+    </ClInclude>
+    <ClInclude Include="ns_timer.hpp">
+      <Filter>src\event</Filter>
+    </ClInclude>
+    <ClInclude Include="tcp_link.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="tcp_server.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="tcp_define.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="logging.hpp">
+      <Filter>src\log</Filter>
+    </ClInclude>
+    <ClInclude Include="ns_cache.hpp">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="message.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="message_parser.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="test.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="package_manager.h">
+      <Filter>src\package</Filter>
+    </ClInclude>
+    <ClInclude Include="message_bus.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="message_session.h">
+      <Filter>src\message</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\doc\需求.txt">
+      <Filter>资源文件</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
