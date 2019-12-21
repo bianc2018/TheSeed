@@ -31,22 +31,16 @@
     <Filter Include="src\message">
       <UniqueIdentifier>{34669e23-81c7-4903-b12b-3315ee46fd0c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\tcp">
+      <UniqueIdentifier>{9a559062-f0c0-4f8f-8a65-0f9ce26c6347}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shell">
+      <UniqueIdentifier>{662d2bee-92b1-4dbd-9146-d6681d37fe16}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>src\main</Filter>
-    </ClCompile>
-    <ClCompile Include="tcp_link.cpp">
-      <Filter>src\message</Filter>
-    </ClCompile>
-    <ClCompile Include="tcp_server.cpp">
-      <Filter>src\message</Filter>
-    </ClCompile>
-    <ClCompile Include="message.cpp">
-      <Filter>src\message</Filter>
-    </ClCompile>
-    <ClCompile Include="message_parser.cpp">
-      <Filter>src\message</Filter>
     </ClCompile>
     <ClCompile Include="util.cpp">
       <Filter>src\common</Filter>
@@ -54,11 +48,20 @@
     <ClCompile Include="test.cpp">
       <Filter>src\main</Filter>
     </ClCompile>
+    <ClCompile Include="tcp_server.cpp">
+      <Filter>src\tcp</Filter>
+    </ClCompile>
+    <ClCompile Include="tcp_link.cpp">
+      <Filter>src\tcp</Filter>
+    </ClCompile>
     <ClCompile Include="message_bus.cpp">
       <Filter>src\message</Filter>
     </ClCompile>
-    <ClCompile Include="message_session.cpp">
-      <Filter>src\message</Filter>
+    <ClCompile Include="package_system.cpp">
+      <Filter>src\package</Filter>
+    </ClCompile>
+    <ClCompile Include="package_loader.cpp">
+      <Filter>src\package</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -71,38 +74,38 @@
     <ClInclude Include="ns_timer.hpp">
       <Filter>src\event</Filter>
     </ClInclude>
-    <ClInclude Include="tcp_link.h">
-      <Filter>src\message</Filter>
-    </ClInclude>
-    <ClInclude Include="tcp_server.h">
-      <Filter>src\message</Filter>
-    </ClInclude>
-    <ClInclude Include="tcp_define.h">
-      <Filter>src\message</Filter>
-    </ClInclude>
     <ClInclude Include="logging.hpp">
       <Filter>src\log</Filter>
-    </ClInclude>
-    <ClInclude Include="ns_cache.hpp">
-      <Filter>src\common</Filter>
-    </ClInclude>
-    <ClInclude Include="message.h">
-      <Filter>src\message</Filter>
-    </ClInclude>
-    <ClInclude Include="message_parser.h">
-      <Filter>src\message</Filter>
     </ClInclude>
     <ClInclude Include="test.h">
       <Filter>src\main</Filter>
     </ClInclude>
-    <ClInclude Include="package_manager.h">
+    <ClInclude Include="tcp_server.h">
+      <Filter>src\tcp</Filter>
+    </ClInclude>
+    <ClInclude Include="tcp_link.h">
+      <Filter>src\tcp</Filter>
+    </ClInclude>
+    <ClInclude Include="shell.h">
+      <Filter>src\shell</Filter>
+    </ClInclude>
+    <ClInclude Include="message.hpp">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="message_parser.hpp">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="message_bus.hpp">
+      <Filter>src\message</Filter>
+    </ClInclude>
+    <ClInclude Include="system_define.h">
       <Filter>src\package</Filter>
     </ClInclude>
-    <ClInclude Include="message_bus.h">
-      <Filter>src\message</Filter>
+    <ClInclude Include="package_system.h">
+      <Filter>src\package</Filter>
     </ClInclude>
-    <ClInclude Include="message_session.h">
-      <Filter>src\message</Filter>
+    <ClInclude Include="package_loader.h">
+      <Filter>src\package</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

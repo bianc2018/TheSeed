@@ -1,84 +1,137 @@
 #include "test.h"
 #include <chrono>
 #include <thread>
-//typedef std::function<void(std::shared_ptr<Message> request,int err)> Handler;
-using namespace msg;
+#include "tcp_server.h"
+#include "logging.hpp"
 
-void send_messages(std::shared_ptr<Message> request)
+
+/*测试tcp*/
+using namespace net::tcp;
+static net::tcp::io_service GIOS;
+bool send_message(const std::string& msg,const std::string & ip,int port,std::function<void(bool ok)> fn)
 {
-    
-    msg::MessageBus::instance().send_message\
-        (request, [request](std::shared_ptr<Message> request, int err)
+    auto lk = TcpLink::generate();
+    lk->set_on_message([lk,fn](std::string& in, std::string& out) {
+        LOG_INFO << "recv msg:" << in << " from " << lk->get_remote_ip() << ":" << lk->get_remote_port();
+        out = in;
+        fn(true);
+        return true;
+        });
+    lk->set_on_connect([lk,fn, msg](bool succeed)
+        {
+            if (succeed)
+                lk->start(msg);
+            else
             {
-                if (0 == err)
-                {
-                    auto l = request->get_body_len();
-                    auto buff = util::make_shared_buff(l + 10);
-                    request->read_body(buff.get(), l);
-                    LOG_INFO << "recv a response :" << buff.get();
-                    send_messages(request);
-                }
-                else
-                {
-                    LOG_ERR << " send message error,code=" << err;
-                }
-            });
+                LOG_ERR << "connect error";
+                fn(false);
+            }
+        });
+    lk->set_on_close([lk](bool su) {
+        LOG_INFO << "link link on close " << lk.use_count()\
+            << " endpoint " << lk->get_remote_ip() << ":" << lk->get_remote_port();
+        lk->close();
+        });
+    return lk->connect(GIOS, ip, port);
 }
-int test_data_transmission()
+time_t beg = 0;
+bool send_message_complate(int i,bool ok)
 {
-    auto& thiz = msg::MessageBus::instance();
+    if (!ok)
+        return false;
 
-    thiz.start();
-
-    thiz.set_cmd_cb("TEST", [](std::shared_ptr<Message> request, int err) {
-        if (0 == err)
+    LOG_INFO << "connect:" << ++i<<" ok "<<ok<<" used "<<time(nullptr)-beg<<" s";
+    send_message("hello world", "127.0.0.1", 5060,
+        [i](bool ok) mutable
         {
-            auto l = request->get_body_len();
-            auto buff = util::make_shared_buff(l + 10);
-            request->read_body(buff.get(), l);
-            LOG_INFO << "recv a TEST message:" << buff.get();
+            send_message_complate(i, ok);
 
-            //返回
-            auto response = std::make_shared<Message>();
-            auto dst = request->get_src_node();
+        });
+    return true;
+}
 
-            response->set_method(METHOD_Response);
-            response->set_token(request->get_token());
-            response->set_dst_node(dst.first, dst.second);
-            std::string msg = "hello word";
-            response->write_body(msg.c_str(), msg.size());
+int test_tcp()
+{
+    net::tcp::TcpServer server(GIOS);
+    server.set_on_accept([](std::shared_ptr<TcpLink> lk) {
+        LOG_INFO << "get a link " << lk->get_remote_ip() << ":" << lk->get_remote_port();
+        
+        lk->set_on_message([lk](std::string& in, std::string& out) {
+            LOG_INFO<<"recv msg:"<<in<<" from " << lk->get_remote_ip() << ":" << lk->get_remote_port();
+            out = in;
+            return true;
+            });
 
-            msg::MessageBus::instance().send_message\
-                (response, [](std::shared_ptr<Message> request, int err)
-                {
-                if (1 == err)
-                {
-                    LOG_ERR << " send response ok";
-                }
-                else
-                {
-                    LOG_ERR << " send response error,code=" << err;
-                }
-                });
-        }
-        else
-        {
-            LOG_ERR << " recv message error,code=" << err;
-        }
+        lk->set_on_close([lk](bool su) {
+            LOG_INFO << "server link on close "<<lk.use_count()\
+                <<" endpoint "<<lk->get_remote_ip()<<":"<< lk->get_remote_port();
+            });
+
+        lk->start();
         });
 
-    //返回
-    auto request = std::make_shared<Message>();
-    request->set_method(METHOD_Request);
-    request->set_cmd("TEST");
-    request->set_dst_node("192.168.1.100", default_port);
-    std::string msg = "hello word";
-    request->write_body(msg.c_str(), msg.size());
-    while (true)
+    beg = time(nullptr);
+    int i = 0;
+    server.start(5060);
+    send_message("hello world","127.0.0.1", 5060, 
+        [i](bool ok) mutable
+        {
+            //send_message_complate(i, ok);
+
+        });
+
+   // while(true)
+        GIOS.run();
+    return 0;
+}
+
+/*
+    测试数据总线
+*/
+#include "message.hpp"
+#include "message_bus.hpp"
+typedef msg::Message<std::string> MYMSG;
+bool on_request(std::shared_ptr<net::tcp::TcpLink> link, \
+    std::shared_ptr<MYMSG> request, std::vector <std::shared_ptr<MYMSG>> responses)
+{
+    LOG_DBG << "request " << request->get_head().path \
+        << " from " << link->get_remote_ip() << ":" << link->get_remote_port();
+    if ("TRANSFER" == request->get_head().path)
     {
-        send_messages(request);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::string body;
+        request->getbody(body);
+        LOG_INFO << "TRANSFER " << body;
     }
+    return false;
+}
+int test_message_bus()
+{
+    auto &bus = msg::MessageBus<MYMSG>::instance();
+    bus.set_on_request(on_request);
+    bus.start();
+
+    auto request = std::make_shared<MYMSG>();
+    request->get_head().path = "TRANSFER";
+    request->get_head().dst = "127.0.0.1";
+    request->setbody("hello world");
+    bus.send_message(request);
     
+    return 0;
+}
+
+#include "package_system.h"
+int test_package_system()
+{
+    auto sys = package::PackageSystem::get_system();
+    auto p = package::PackageSystem::get_basic_system();
+    auto p1 = package::PackageSystem::get_basic_system();
+    sys->scan_package("D:\\code\\TheSeed\\TheSeed\\bin\\Debug\\package\\");
+    sys->run_instance("Test", "test1");
+    sys->scan_package("D:\\code\\TheSeed\\TheSeed\\bin\\Debug\\package\\");
+    sys->run_instance("Test", "test2");
+    //sys->run_instance("Test", "test");
+    //sys->run_instance("Test", "test1");
+    //sys->stop_instance("test");
+    sys->clear_all();
     return 0;
 }

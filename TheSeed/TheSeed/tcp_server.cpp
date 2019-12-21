@@ -13,7 +13,12 @@ net::tcp::TcpServer::TcpServer(io_service & service):\
 	
 
 }
-bool net::tcp::TcpServer::start(unsigned int port, ACCEPT_HANDLER handler, int accept_num)
+bool net::tcp::TcpServer::set_on_accept(ON_ACCEPT fn)
+{
+    on_accept_ = fn;
+    return true;
+}
+bool net::tcp::TcpServer::start(unsigned int port, int accept_num)
 {
     boost::asio::ip::tcp::resolver resolver(service_);
     boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve("0.0.0.0", std::to_string(port)).begin();
@@ -50,7 +55,6 @@ bool net::tcp::TcpServer::start(unsigned int port, ACCEPT_HANDLER handler, int a
     }
     //接收
     run_flag_ = true;
-    handler_ = handler;
     accept(accept_num);
     return true;
 }
@@ -78,11 +82,11 @@ void net::tcp::TcpServer::accept_event()
         //异步接收连接
         server_.async_accept(*(client), [this, client](const boost::system::error_code& error)
             {
-                auto link = TcpLink::connect(client);
+                auto link = tcp::TcpLink::generate();
+                link->bind(client);
                 if (error)
                 {
                     LOG_ERR << error.value() <<" "<< error.message();
-                    handler_(link, TCP_ERROR_ACCEPT_ERROR);
                 }
                 else
                 {
@@ -90,13 +94,14 @@ void net::tcp::TcpServer::accept_event()
                     {
                         LOG_INFO << "获得连接 " << link->get_remote_ip() << ":" << link->get_remote_port();
                         //协议栈异步处理连接
-                        handler_(link, TCP_ERROR_CODE_OK);
+                        if(on_accept_)
+                            on_accept_(link);
+
                     }
                     else
                     {
                         LOG_INFO << "获得连接：套接字错误 " ;
                         //协议栈异步处理连接
-                        handler_(link, TCP_ERROR_LINK_HANDLE_ERROR);
 
                     }
                     //重复接收

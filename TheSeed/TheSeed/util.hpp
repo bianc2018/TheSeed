@@ -4,9 +4,9 @@
 
 
 #ifndef __UNIX
-#include <WinSock2.h>
-#pragma comment(lib, "Ws2_32.lib")
-#pragma warning(disable:4996)
+//#include <WinSock2.h>
+//#pragma comment(lib, "Ws2_32.lib")
+//#pragma warning(disable:4996)
 #else
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -247,7 +247,7 @@ namespace ns
 			inline void logger_writer(std::string& level, std::string& message, bool disable_cout = false)
 			{
 				LOGGER_LOCKS_();
-				std::string prefix = aux::time_now_string() + std::string("[") + level + std::string("]: ");
+                std::string prefix = aux::time_now_string();//+ std::string("[") + level + std::string("]: ");
 				std::string tmp = message + "\n";
 				std::string whole = prefix + tmp;
 				if (aux::writer_single<auto_logger_file>().is_open())
@@ -300,8 +300,18 @@ namespace ns
 					return *this;
 				}
 			};
+
+            //字符分割
+            static std::string get_filename(const std::string& path)
+            {
+                auto p = path.find_last_of("/\\");
+                if (std::string::npos == p)
+                    return path;
+                return path.substr(p + 1);
+            }
 		}
-	
+	    
+       
 	}
 }
 #define INIT_LOGGER(logfile) do \
@@ -323,12 +333,12 @@ namespace ns
 
 
 #if (defined(DEBUG) || defined(_DEBUG) )
-
-#define LOG_DBG ns::util::log::logger(ns::util::log::LOGGER_DEBUG_STR)<<"["<<__FILE__<<"]"<<"["<<__LINE__<<"]"
-#define LOG_INFO ns::util::log::logger(ns::util::log::LOGGER_INFO_STR)<<"["<<__FILE__<<"]"<<"["<<__LINE__<<"]"
-#define LOG_WARN ns::util::log::logger(ns::util::log::LOGGER_WARN_STR)<<"["<<__FILE__<<"]"<<"["<<__LINE__<<"]"
-#define LOG_ERR ns::util::log::logger(ns::util::log::LOGGER_ERR_STR)<<"["<<__FILE__<<"]"<<"["<<__LINE__<<"]"
-#define LOG_FILE ns::util::log::logger(ns::util::log::LOGGER_FILE_STR, true)<<"["<<__FILE__<<"]"<<"["<<__LINE__<<"]"
+#define __FILE_NAME__  ns::util::log::get_filename(__FILE__)
+#define LOG_DBG ns::util::log::logger(ns::util::log::LOGGER_DEBUG_STR)<<"["<<__FILE_NAME__<<" "<<__LINE__<<"]"
+#define LOG_INFO ns::util::log::logger(ns::util::log::LOGGER_INFO_STR)<<"["<<__FILE_NAME__<<" "<<__LINE__<<"]"
+#define LOG_WARN ns::util::log::logger(ns::util::log::LOGGER_WARN_STR)<<"["<<__FILE_NAME__<<" "<<__LINE__<<"]"
+#define LOG_ERR ns::util::log::logger(ns::util::log::LOGGER_ERR_STR)<<"["<<__FILE_NAME__<<" "<<__LINE__<<"]"
+#define LOG_FILE ns::util::log::logger(ns::util::log::LOGGER_FILE_STR, true)<<"["<<__FILE_NAME__<<" "<<__LINE__<<"]"
 
 #else
 

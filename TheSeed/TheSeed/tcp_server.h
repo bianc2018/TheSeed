@@ -31,14 +31,16 @@ namespace net
 		//接受 acceptor
 		typedef boost::asio::ip::tcp::acceptor acceptor;
 
-        typedef boost::function<void(TcpLink::PTcpLink link, int err)> ACCEPT_HANDLER;
+        typedef boost::function<void(std::shared_ptr<TcpLink>)> ON_ACCEPT;
 		//表示一个服务器
 		class TcpServer :public boost::noncopyable
 		{
 		public:
 			TcpServer(io_service &service);
 			
-            bool start(unsigned int port, ACCEPT_HANDLER handler,int accept_num = 2);
+            bool set_on_accept(ON_ACCEPT fn);
+
+            bool start(unsigned int port,int accept_num = 2);
 			
             bool stop();
 
@@ -54,7 +56,7 @@ namespace net
 			//接收连接
 			acceptor server_;
 
-            ACCEPT_HANDLER handler_;
+            ON_ACCEPT on_accept_;
 
             std::atomic_bool run_flag_;
 		};
