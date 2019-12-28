@@ -54,7 +54,7 @@ namespace shell
        typedef std::function<bool(std::shared_ptr<value> obj)> ReturnCall;
        ReturnCall __return__;
        //日志输出
-       typedef std::function<bool(const std::string& name,int level,...)> LogCall;
+       typedef std::function<bool(const std::string& instance_name,int level,...)> LogCall;
        LogCall __log__;
     };
 
@@ -70,10 +70,10 @@ namespace shell
         bool exec(Cmd cmd);
 
         //根据变量名称获取变量引用 不存在返回nullptr
-        std::shared_ptr<value> ref(const std::string& name);
+        std::shared_ptr<value> ref(const std::string& instance_name);
 
         //构建变量 如果存在则覆盖
-        bool struct_ref(const std::string& name, std::shared_ptr<value> obj);
+        bool struct_ref(const std::string& instance_name, std::shared_ptr<value> obj);
     private:
         //环境
         std::hash_map<std::string, std::shared_ptr<value>> ctx_;

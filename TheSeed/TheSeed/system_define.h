@@ -6,11 +6,9 @@
 #define SYSTEM_DEFINE_H_
 #include <map>
 #include <atomic>
-
-#include <boost/any.hpp>
-#include <boost/noncopyable.hpp>
-
-
+#include <memory>
+#include <string>
+#include <functional>
 namespace package
 {
 	/**************************************系统定义*****************************************/
@@ -24,24 +22,52 @@ namespace package
 
 	class PackageInstance;
 
-	typedef boost::any value;
+	typedef std::string value;
+
+	//插件交互信息 拓展这个事件 作为事件类型
+	//实例节点
+	struct InstanceNode
+	{
+		std::string ip;
+		int port = 0;//<=0取默认值
+		std::string instance;
+	};
+	enum class SystemEventType
+	{
+		//出现错误
+		error = -1,
+		//数据透传事件
+		message=0,
+		
+	};
+	struct SystemEvent
+	{
+		SystemEventType type;
+		InstanceNode src;
+		InstanceNode dst;
+		//交互的消息体
+		std::string message;
+
+	};
 
 	//作为参数传递给插件，系统调用 纯虚函数
-	class System:boost::noncopyable
+	class System
 	{
 		
 	public:
 		System() {};
+		System(const System& sys) = delete;//不允许拷贝
+
 		virtual ~System() {};
 
-		//根据变量名称获取变量引用 不存在返回nullptr
-		virtual std::shared_ptr<value> ref(const std::string& name)=0;
+		//根据变量名称获取变量引用 
+		virtual value get_env(const std::string& name,value notfond)=0;
 
 		//构建变量 如果存在则覆盖
-		virtual bool struct_ref(const std::string& name, std::shared_ptr<value> obj)=0;
+		virtual bool export_env(const std::string& name, value obj)=0;
 
 		//删除
-		virtual bool delete_ref(const std::string& name) = 0;
+		virtual bool delete_env(const std::string& name) = 0;
 
 		//打印日志
 		virtual void print_log(LogLevel level,const std::string& msg)=0;
@@ -61,12 +87,13 @@ namespace package
 
 		/********************************消息传递******************************/
 		//设置消息回调
-		virtual bool set_message_callback(\
+		virtual bool set_event_callback(\
 			std::shared_ptr<PackageInstance> self,\
-			std::function<void(const std::string& from, const std::string & message)>) = 0;
+			std::function<void(std::shared_ptr<SystemEvent> message)>) = 0;
 
-		//发送消息 to 格式如 ip:port/instance_name
-		virtual bool send_message(const std::string& to, const std::string& message) = 0;
+		//推送数据
+		virtual bool post_event(std::shared_ptr<PackageInstance> self,\
+			std::shared_ptr<SystemEvent> message) = 0;
 
 	private:
 		//std::hash_map<std::string, std::shared_ptr<value>> ctx_;
@@ -86,8 +113,48 @@ namespace package
 		//author
 		std::string author;
 
-		//依赖项 name -> min version 名称 最小版本
-		std::map<std::string, Ver> depends;
+		////依赖项 name -> min version 名称 最小版本
+		//std::map<std::string, Ver> depends;
+
+		//Basic_info& operator=(Basic_info& right)noexcept
+		//{
+		//	version = right.version;
+		//	name = right.name;
+		//	author = right.author;
+		//	for (auto d : right.depends)
+		//		depends[d.first] = d.second;
+		//	return *this;
+		//}
+
+		//Basic_info& operator=(Basic_info&& right)noexcept
+		//{
+		//	version = right.version;
+		//	name = right.name;
+		//	author = right.author;
+		//	for (auto d : right.depends)
+		//		depends[d.first] = d.second;
+		//	return *this;
+		//}
+		//Basic_info():
+		//	version(0)
+		//{
+
+		//}
+		//Basic_info(const Basic_info& right):\
+		//	version(right.version), name(right.name), author(right.author)
+		//{
+		//	for (auto d : right.depends)
+		//		depends[d.first] = d.second;
+		//}
+		//Basic_info(Basic_info&& right) noexcept:\
+		//	version(right.version), name(right.name), author(right.author)
+		//{
+		//	version = std::move(right.version);
+		//	name = std::move(right.name);
+		//	author = std::move(right.author);
+		//	for (auto d : right.depends)
+		//		depends[d.first] = d.second;
+		//}
 	};
 
 	//运行状态
@@ -109,7 +176,7 @@ namespace package
 	};
 	typedef std::atomic<PACKAGE_INSTANCE_RUN_FLAG> PackageRunFlag;
 	//插件实例
-	class PackageInstance:std::enable_shared_from_this<PackageInstance>
+	class PackageInstance:public std::enable_shared_from_this<PackageInstance>
 	{
 	public:
 		PackageInstance(std::shared_ptr<System> sys,const std::string &name)\
@@ -131,7 +198,7 @@ namespace package
 		virtual Basic_info get_basic_info()=0;
 
 		//获取插件依赖
-		virtual const std::map<std::string, Ver>& get_depends() = 0;
+		virtual std::map<std::string, Ver> get_depends() = 0;
 
 		//获取系统调用
 		virtual std::shared_ptr<System> get_system_call(){ return sys_call_;}

@@ -49,6 +49,28 @@ namespace msg
             return s_instance;
         }
 
+        //根据域名获取ip列表
+        bool resolver(const std::string& host, std::vector<std::string >& ip_list)
+        {
+            boost::asio::ip::tcp::resolver resolver(g_io_service);
+            boost::asio::ip::tcp::resolver::query query(host, "");
+            boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
+            boost::asio::ip::tcp::resolver::iterator end; // End marker.
+            while (iter != end)
+            {
+                boost::asio::ip::tcp::endpoint ep = *iter;
+                ip_list.push_back(ep.address().to_string());
+                ++iter;
+            }
+            return true;
+        }
+
+        //获取本地端口
+        int get_local_port()
+        {
+            return port_;
+        }
+
         bool start(int port = default_port, int thread_num = 10)
         {
             port_ = port;

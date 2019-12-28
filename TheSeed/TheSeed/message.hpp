@@ -11,6 +11,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/map.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
@@ -145,6 +146,24 @@ namespace msg
         MessageHead& get_head()
         {
             return data_.head;
+        }
+
+        //查找拓展头
+        std::string get_extend(const std::string& key, const std::string& notfond="")
+        {
+            auto p = data_.head.extend_head.find(key);
+            if (data_.head.extend_head.end() == p)
+            {
+                return notfond;
+            }
+            return p->second;
+        }
+
+        //设置
+        bool set_extend(const std::string& key, const std::string& value)
+        {
+            data_.head.extend_head[key] = value;
+            return true;
         }
 
         //获取报文体

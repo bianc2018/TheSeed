@@ -2,6 +2,28 @@
 
 #include "logging.hpp"
 #include "util.hpp"
+
+//序列化
+namespace boost {
+    namespace serialization
+    {
+        template<typename Archive>
+        void serialize(Archive& ar, package::SystemEvent& msg, const unsigned int version)
+        {
+            ar& msg.type;
+            ar& msg.src.ip;
+            ar& msg.src.port;
+            ar& msg.src.instance;
+            ar& msg.dst.ip;
+            ar& msg.dst.port;
+            ar& msg.dst.instance;
+
+            ar& msg.message;
+        }
+    }
+}
+
+
 #include "message_bus.hpp"
 
 using namespace package;
@@ -12,35 +34,27 @@ package::PackageSystem::PackageSystem()
     bus.set_on_request(std::bind(&PackageSystem::on_message,this,\
         std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     bus.start();
+
+    //任务池
+    event_pool_.submit(std::bind(&PackageSystem::event_dispatcher, this,\
+        std::placeholders::_1));
+    set_event_handler(SystemEventType::message, \
+        std::bind(&PackageSystem::event_message_hander, this, \
+            std::placeholders::_1));
+    event_pool_.start();
+
+    bus.resolver(boost::asio::ip::host_name(), local_ip_list_);
+    local_ip_list_.push_back(boost::asio::ip::address_v4::loopback().to_string());
+    for (auto& p : local_ip_list_)
+    {
+        LOG_DBG << "local ip=" << p;
+    }
 }
 
 package::PackageSystem::~PackageSystem()
 {
     LOG_DBG << "~PackageSystem :=" << (unsigned int)(this);
     //clear_all();
-}
-
-std::shared_ptr<value> package::PackageSystem::ref(const std::string& name)
-{
-    std::lock_guard<std::mutex> lk(ctx_lock_);
-    auto p = ctx_.find(name);
-    if(ctx_.end() == p)
-        return nullptr;
-    return p->second;
-}
-
-bool package::PackageSystem::struct_ref(const std::string& name, std::shared_ptr<value> obj)
-{
-    std::lock_guard<std::mutex> lk(ctx_lock_);
-    ctx_[name] = obj;
-    return true;
-}
-
-bool package::PackageSystem::delete_ref(const std::string& name)
-{
-    std::lock_guard<std::mutex> lk(ctx_lock_);
-    ctx_.erase(name);
-    return true;
 }
 
 //4k
@@ -131,7 +145,7 @@ bool package::PackageSystem::stop_instance(const std::string& instance_name)
 
 bool package::PackageSystem::scan_package(const std::string& path)
 {
-    LOG_INFO << "scan_package:" << path;
+    //LOG_INFO << "scan_package:" << path;
     //判断是不是目录 遍历目录 然后逐一加载 是否有对应的函数
     if (boost::filesystem::is_directory(path))
     {
@@ -236,26 +250,213 @@ bool package::PackageSystem::clear_instance(const std::string& package_name)
     return true;
 }
 
-bool package::PackageSystem::on_message(std::shared_ptr<net::tcp::TcpLink> link, std::shared_ptr<MessageType> request, std::vector<std::shared_ptr<MessageType>> responses)
+bool package::PackageSystem::on_message(std::shared_ptr<net::tcp::TcpLink> link,\
+    std::shared_ptr<MessageType> request, std::vector<std::shared_ptr<MessageType>> responses)
 {
+    if (request)
+    {
+        LOG_INFO << "recv a request "<< request->get_head().path\
+            <<" from " << request->get_head().src;
+        if (SYSTEM_EVENT == request->get_head().path)
+        {
+            std::shared_ptr<SystemEvent> event;
+            if (request->getbody(event))
+            {
+                return event_pool_.push(event);
+            }
+            else
+            {
+                LOG_ERR << "/SystemEvent body must be class SystemEvent ";
+            }
+            return true;
+        }
+        else
+        {
+            LOG_ERR << "no deal path=" << request->get_head().path;
+            return true;
+        }
+        
+    }
+    return true;
+}
+
+void package::PackageSystem::event_dispatcher(std::shared_ptr<SystemEvent> event)
+{
+    LOG_DBG << "event queue.size=" << event_pool_.queue_size();
+    auto p = event_handlers_.find(event->type);
+    if (event_handlers_.end() == p)
+    {
+        LOG_DBG << "not fond handler type=" << (int)event->type;
+        event_send(event);
+    }
+    else
+    {
+        if (p->second)
+        {
+            p->second(event);
+        }
+        else
+        {
+            LOG_DBG << "handler is invaildable type=" << (int)event->type;
+            event_send(event);
+        }
+    }
+}
+
+void package::PackageSystem::set_event_handler(SystemEventType type,
+    std::function<void(std::shared_ptr<SystemEvent> event)> handler_fn)
+{
+    event_handlers_[type] = handler_fn;
+}
+
+void package::PackageSystem::event_message_hander(std::shared_ptr<SystemEvent> event)
+{
+    LOG_DBG << "recv message -> " << event->message\
+        << " from " << event->src.ip << ":" << event->src.port << ":" << event->src.instance\
+        << " to " << event->dst.ip << ":" << event->dst.port << ":" << event->dst.instance;
+    event_send(event);
+}
+
+bool package::PackageSystem::event_send(std::shared_ptr<SystemEvent> event)
+{
+    //目标ip为空即表示发送给本地实例
+    //区分环回地址
+    if (event->dst.ip.empty()|| check_is_local(event))
+    {
+        if (event->dst.instance.empty())
+        {
+            //表示广播
+            LOG_DBG << "broadcast_event from "\
+                << event->src.ip << ":" << event->src.port << ":" << event->src.instance;
+            return broadcast_event(event);
+        }
+        else
+        {
+            auto obj = get_object(event->dst.instance);
+            if (obj)
+            {
+                LOG_DBG << "event " << (int)event->type\
+                    << " from " << event->src.ip << ":" << event->src.port << ":" << event->src.instance\
+                    << " to " << event->dst.ip << ":" << event->dst.port << ":" << event->dst.instance;
+                if (obj->msg_call_back)
+                {
+                    obj->msg_call_back(event);
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                LOG_ERR << "not find obj name=" << event->dst.instance;
+                return false;
+            }
+        }
+    }
+    //远程
+    else
+    {
+        
+        auto& bus = msg::MessageBus<MessageType>::instance();
+        auto message = std::make_shared<MessageType>();
+        //message->get_head().src = event.src.ip + std::to_string(event.src.port);
+        message->get_head().dst = event->dst.ip +":"+ std::to_string(event->dst.port);
+        message->setbody(event);
+        LOG_DBG << "send a event message to" << message->get_head().dst;
+        return bus.send_message(message);
+    }
     return false;
 }
 
-bool package::PackageSystem::set_message_callback(std::shared_ptr<PackageInstance> self,\
-    std::function<void(const std::string & from, const std::string & message)>)
+bool package::PackageSystem::broadcast_event(std::shared_ptr<SystemEvent> event)
 {
-    auto p = get_object(self->get_basic_info().name);
+    std::lock_guard<std::mutex> lk(package_object_list_lock_);
+    for (auto p = package_object_list_.begin(); p != package_object_list_.end();)
+    {
+        auto obj = p->second;
+        if (obj && obj->msg_call_back)
+        {
+            auto tmp = event;
+            obj->msg_call_back(tmp);
+        }
+        ++p;
+    }
+    return true;
+}
+
+bool package::PackageSystem::check_is_local(std::shared_ptr<SystemEvent> event)
+{
+    if (event->dst.port == 0 || event->dst.ip.empty())
+        return true;
+
+    if (msg::MessageBus<MessageType>::instance().get_local_port() == event->dst.port)
+    {
+        return false;
+    }
+
+    for (auto& p : local_ip_list_)
+    {
+        if (event->dst.ip == p)
+        {
+            return true;
+        }
+    }
     return false;
 }
 
-bool package::PackageSystem::send_message(const std::string& to, const std::string& message)
+bool package::PackageSystem::set_event_callback(std::shared_ptr<PackageInstance> self,\
+    std::function<void(std::shared_ptr<SystemEvent> message)> func)
 {
+    if (self)
+    {
+        //找到对应对象 设置回调
+        auto p = get_object(self->get_name());
+        if (p)
+        {
+            p->msg_call_back = func;
+            return true;
+        }
+    }
     return false;
+}
+
+//推送一个数据请求
+bool package::PackageSystem::post_event(std::shared_ptr<PackageInstance> self, \
+    std::shared_ptr<SystemEvent> event)
+{
+    event->src.instance = self->get_name();
+    /*while (event_pool_.queue_size() > 100000)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));*/
+    return event_pool_.push(event);
+}
+
+value package::PackageSystem::get_env(const std::string& name, value notfond)
+{
+    //, value notfond
+    std::lock_guard<std::mutex> lk(ctx_lock_);
+    auto p = ctx_.find(name);
+    if (ctx_.end() == p)
+        return notfond;
+    return p->second;
+}
+
+bool package::PackageSystem::export_env(const std::string& name, value obj)
+{
+    std::lock_guard<std::mutex> lk(ctx_lock_);
+    ctx_[name] = obj;
+    return true;
+}
+
+bool package::PackageSystem::delete_env(const std::string& name)
+{
+    std::lock_guard<std::mutex> lk(ctx_lock_);
+    ctx_.erase(name);
+    return true;
 }
 
 bool package::PackageSystem::clear_all()
 {
     LOG_DBG << "clear_all";
+    event_pool_.quit();
     {
         std::lock_guard<std::mutex> lk(package_loader_list_lock_);
         for (auto p = package_loader_list_.begin(); p != package_loader_list_.end();)

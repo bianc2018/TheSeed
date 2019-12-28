@@ -9,31 +9,35 @@
 #include <functional>
 #include <unordered_map>
 #include <mutex>
+
+#include <boost/any.hpp>
+#include "thread_pool.hpp"
 #include "message_bus.hpp"
 #include "package_loader.h"
+
 namespace package
 {
-    class PackageSystem:public System
+    //数据透传数据，插件实例透传数据 后期可以考虑用map管理
+    const std::string SYSTEM_EVENT = "/SystemEvent";
+
+    class PackageSystem :public System
     {
     public:
         PackageSystem();
         //系统调用
         virtual ~PackageSystem();
 
-        //根据变量名称获取变量引用 不存在返回nullptr
-        virtual std::shared_ptr<value> ref(const std::string& name)override;
-
-        //构建变量 如果存在则覆盖
-        virtual bool struct_ref(const std::string& name, std::shared_ptr<value> obj) override;
-
-        virtual bool delete_ref(const std::string& name)override;
+        //插件系统环境变量操作
+        virtual value get_env(const std::string& name, value notfond)override;
+        virtual bool export_env(const std::string& name, value obj) override;
+        virtual bool delete_env(const std::string& name) override;
 
         //打印日志
         virtual void print_log(LogLevel level, const std::string& msg) override;
 
         //运行一个实例 失败返回空
         virtual bool run_instance(\
-            const std::string packename, std::string instance_name="") override;
+            const std::string packename, std::string instance_name = "") override;
 
         //停止一个实例的运行
         virtual bool stop_instance(const std::string& instance_name)override;
@@ -47,6 +51,14 @@ namespace package
         //卸载所有的包
         bool clear_all();
 
+        //设置消息回调
+        virtual bool set_event_callback(\
+            std::shared_ptr<PackageInstance> self, \
+            std::function<void(std::shared_ptr<SystemEvent> message)> func)override;
+
+        //推送数据
+        virtual bool post_event(std::shared_ptr<PackageInstance> self, \
+            std::shared_ptr<SystemEvent> message) override;
     public:
 
         //获取基础实例
@@ -69,16 +81,47 @@ namespace package
         //清理对应包名的实例
         bool clear_instance(const std::string& package_name);
 
+        //*****************消息通信*****************//
         //消息回调
-        typedef msg::Message<std::string> MessageType;
+        typedef msg::Message<std::string,\
+            std::shared_ptr<package::SystemEvent>> MessageType;
+
         bool on_message(std::shared_ptr<net::tcp::TcpLink> link, \
             std::shared_ptr<MessageType> request, \
             std::vector <std::shared_ptr<MessageType>> responses);
+
+        /********************************事件系统**********************************/
+        //事件分发器
+        void event_dispatcher(std::shared_ptr<SystemEvent> event);
+        
+        //注册消息处理器
+        void set_event_handler(SystemEventType type,\
+            std::function<void(std::shared_ptr<SystemEvent> event)> handler_fn);
+
+        //透传回调
+        void event_message_hander(std::shared_ptr<SystemEvent> event);
+
+        //事件投递到目标 本地的直接调用回调函数 远程的调用网络库传输
+        bool event_send(std::shared_ptr<SystemEvent> event);
+
+        //事件广播
+        bool  broadcast_event(std::shared_ptr<SystemEvent> event);
+
+        //检查消息目标是不是本地 如果是返回true
+        bool  check_is_local(std::shared_ptr<SystemEvent> event);
     private:
+        //本地IP列表
+        std::vector<std::string> local_ip_list_;
+
+        //事件处理回调
+        std::map < SystemEventType, \
+            std::function<void(std::shared_ptr<SystemEvent> event)>> event_handlers_;
+        //事件处理队列
+        util::ThreadPool<SystemEvent> event_pool_;
 
         //环境变量
         std::mutex ctx_lock_;
-        std::unordered_map<std::string, std::shared_ptr<value>> ctx_;
+        std::unordered_map<std::string, value> ctx_;
 
         //插件名称 -> 插件加载器
         std::mutex package_loader_list_lock_;
@@ -86,11 +129,8 @@ namespace package
 
         //插件实例 实例名->实例
         std::mutex package_object_list_lock_;
-        std::map<std::string ,std::shared_ptr<PackageObject> >package_object_list_;
+        std::map<std::string, std::shared_ptr<PackageObject> >package_object_list_;
 
-        // 通过 System 继承
-        virtual bool set_message_callback(std::shared_ptr<PackageInstance> self, std::function<void(const std::string & from, const std::string & message)>) override;
-        virtual bool send_message(const std::string& to, const std::string& message) override;
     };
 }
 #endif

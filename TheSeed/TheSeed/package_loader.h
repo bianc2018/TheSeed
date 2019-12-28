@@ -34,7 +34,7 @@ namespace package
         //对应的加载线程
         std::thread run_thread;
         //消息回调
-        std::function<bool(std::string & in, std::string & out)> msg_call_back;
+        std::function<void(std::shared_ptr<SystemEvent> message)> msg_call_back;
         //加载器 引用
         std::shared_ptr<PackageLoader> loader_ref;
 

@@ -17,7 +17,10 @@ public:
 	virtual Basic_info get_basic_info()override;
 
 	//获取插件依赖
-	virtual const std::map<std::string, Ver>& get_depends()override;
+	virtual  std::map<std::string, Ver> get_depends()override;
+
+	//事件回调
+	void event_cb(std::shared_ptr<SystemEvent> message);
 };
 
 PACKAGE_EXPORT_SYMBOLS bool Package_loader(std::shared_ptr<System> sys,

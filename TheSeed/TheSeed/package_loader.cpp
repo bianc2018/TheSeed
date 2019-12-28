@@ -41,18 +41,18 @@ bool package::PackageLoader::load(const std::string& dll_path)
 
         if (func(system_, package_info))
         {
-            //加载子项
-            for (auto& dep : package_info->info.depends)
-            {
-                if (system_->is_loaded(dep.first))
-                {
-                    LOG_ERR << "package is cannot load ,depends:"\
-                        << dep.first << " not fond";
-                    package_info.reset();
-                    FreePackage(handle);
-                    return false;
-                }
-            }
+            ////加载子项
+            //for (auto& dep : package_info->info.depends)
+            //{
+            //    if (system_->is_loaded(dep.first))
+            //    {
+            //        LOG_ERR << "package is cannot load ,depends:"\
+            //            << dep.first << " not fond";
+            //        package_info.reset();
+            //        FreePackage(handle);
+            //        return false;
+            //    }
+            //}
             if (!package_info|| "" == package_info->info.name)
             {
                 LOG_ERR << "package is cannot load ,info is null";

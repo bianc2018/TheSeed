@@ -107,6 +107,12 @@
     <ClInclude Include="package_loader.h">
       <Filter>src\package</Filter>
     </ClInclude>
+    <ClInclude Include="safe_queue.hpp">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="thread_pool.hpp">
+      <Filter>src\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\doc\需求.txt">

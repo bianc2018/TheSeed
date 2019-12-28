@@ -1,0 +1,10 @@
+﻿// Shell.idl: Shell.dll 的类型库源
+// 此文件将由 MIDL 编译器处理以产生
+// 类型库(Shell.tlb)。
+
+[ uuid(9e378a18-e3ed-4adf-87c3-2737fe693543), version(1.0) ]
+library Shell
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+};

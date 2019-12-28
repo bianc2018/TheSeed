@@ -125,13 +125,16 @@ int test_package_system()
     auto sys = package::PackageSystem::get_system();
     auto p = package::PackageSystem::get_basic_system();
     auto p1 = package::PackageSystem::get_basic_system();
+
     sys->scan_package("D:\\code\\TheSeed\\TheSeed\\bin\\Debug\\package\\");
     sys->run_instance("Test", "test1");
-    sys->scan_package("D:\\code\\TheSeed\\TheSeed\\bin\\Debug\\package\\");
     sys->run_instance("Test", "test2");
+    sys->run_instance("Test", "test3");
+    system("pause");
     //sys->run_instance("Test", "test");
     //sys->run_instance("Test", "test1");
     //sys->stop_instance("test");
+    
     sys->clear_all();
     return 0;
 }
